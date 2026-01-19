@@ -54,4 +54,7 @@ We tested different configurations:
 
 
 
-In data preprocessing the focus was placed on preparing the images in a way that is suitable for convolutional neural networks. All images were resized to 48×48 pixels and converted to grayscale to ensure a consistent input format. Pixel values were normalized to improve training stability. The dataset was split into training, validation, and test sets to allow proper evaluation of the model’s generalization performance
+In data preprocessing the focus was on preparing the images in a way that is suitable for convolutional neural networks. All images were resized to 48×48 pixels and converted to grayscale to ensure a consistent input format. Pixel values were normalized to improve training stability. The dataset was split into training, validation, and test sets to allow proper evaluation of the model’s generalization performance
+
+Our CNN has three convolutional blocks for 48×48 grayscale faces. Each block does convolution, batch normalization, ReLU, and pooling to learn features. Batch normalization helps training, and dropout in the fully connected part reduces overfitting. The final layers classify into 7 emotions. It's tuned to train well on FER-2013 and fast enough for real-time use
+
