@@ -1,0 +1,38 @@
+# Data directories (too large for git)
+data/
+*.jpg
+*.png
+*.jpeg
+
+# Model checkpoints (can be large)
+models/*.pth
+models/*.pt
+models/*.ckpt
+*.pth
+*.pt
+*.ckpt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
