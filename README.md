@@ -52,3 +52,6 @@ We tested different configurations:
 - The model works with grayscale 48×48 face images
 - For the live demo, we use OpenCV's face detector (Haar cascade) to find faces in the webcam feed
 
+
+
+In data preprocessing the focus was placed on preparing the images in a way that is suitable for convolutional neural networks. All images were resized to 48×48 pixels and converted to grayscale to ensure a consistent input format. Pixel values were normalized to improve training stability. The dataset was split into training, validation, and test sets to allow proper evaluation of the model’s generalization performance
