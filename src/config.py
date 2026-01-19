@@ -47,6 +47,10 @@ NUM_WORKERS = 2
 OPTIMIZER = "Adam"  # Options: "Adam" or "SGD"
 WEIGHT_DECAY = 0.0001  # L2 regularization
 
+# Loss Function
+LABEL_SMOOTHING = 0.1  # Prevents overconfidence, helps with class imbalance (rare emotions like disgust)
+# Label smoothing helps model handle ambiguous cases and prevents overfitting to common emotions
+
 # Learning Rate Scheduling
 LR_SCHEDULER = "ReduceLROnPlateau"  # Options: "ReduceLROnPlateau", "StepLR", "CosineAnnealingLR"
 LR_FACTOR = 0.5  # Factor to reduce LR by

@@ -25,16 +25,19 @@ class EmotionCNN(nn.Module):
         # First conv block: Detects basic facial features (edges, textures)
         # 48x48 -> 24x24 after pooling
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        nn.init.kaiming_normal_(self.conv1.weight, mode='fan_out', nonlinearity='relu')
         self.bn1 = nn.BatchNorm2d(32)
 
         # Second conv block: Identifies facial regions (eyes, mouth, eyebrows)
         # 24x24 -> 12x12 after pooling
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        nn.init.kaiming_normal_(self.conv2.weight, mode='fan_out', nonlinearity='relu')
         self.bn2 = nn.BatchNorm2d(64)
 
         # Third conv block: Learns emotion-specific patterns (smile curvature, eyebrow position)
         # 12x12 -> 6x6 after pooling - maintains spatial resolution for emotion features
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        nn.init.kaiming_normal_(self.conv3.weight, mode='fan_out', nonlinearity='relu')
         self.bn3 = nn.BatchNorm2d(128)
 
         self.pool = nn.MaxPool2d(2, 2)
@@ -43,7 +46,9 @@ class EmotionCNN(nn.Module):
 
         # Final classification layers: Maps 6x6 feature maps to 7 emotion categories
         self.fc1 = nn.Linear(128 * 6 * 6, 256)
+        nn.init.kaiming_normal_(self.fc1.weight, mode='fan_out', nonlinearity='relu')
         self.fc2 = nn.Linear(256, num_classes)
+        nn.init.kaiming_normal_(self.fc2.weight, mode='fan_out', nonlinearity='relu')
 
     def forward(self, x):
         # First conv block: 48x48 -> 24x24
