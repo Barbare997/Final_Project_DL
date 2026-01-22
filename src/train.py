@@ -70,11 +70,14 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, current_e
     correct_predictions = 0
     total_samples = 0
     
-    # Learning rate warmup for first few epochs
-    if warmup_epochs > 0 and current_epoch < warmup_epochs:
+    # Learning rate warmup for first few epochs (only if using CosineAnnealingLR)
+    # For ReduceLROnPlateau, skip warmup to avoid conflicts
+    if warmup_epochs > 0 and current_epoch < warmup_epochs and LR_SCHEDULER == "CosineAnnealingLR":
         warmup_factor = (current_epoch + 1) / warmup_epochs
         for param_group in optimizer.param_groups:
-            param_group['lr'] = param_group.get('initial_lr', LEARNING_RATE) * warmup_factor
+            if 'initial_lr' not in param_group:
+                param_group['initial_lr'] = LEARNING_RATE
+            param_group['lr'] = param_group['initial_lr'] * warmup_factor
     
     # Process each batch of images
     for images, labels in tqdm(train_loader, desc="Training"):

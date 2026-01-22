@@ -42,7 +42,7 @@ BATCH_SIZE = 64
 NUM_EPOCHS = 100  # Increased from 50 - model was still improving at epoch 50
 LEARNING_RATE = 0.0005  # Keep at 0.0005 - 0.001 was too high and caused instability
 NUM_WORKERS = 2
-WARMUP_EPOCHS = 5  # Learning rate warmup for better training stability
+WARMUP_EPOCHS = 3  # Reduced from 5 - shorter warmup, start learning faster
 
 # Optimizer
 OPTIMIZER = "Adam"  # Options: "Adam" or "SGD"
@@ -53,11 +53,11 @@ LABEL_SMOOTHING = 0.1  # Prevents overconfidence, helps with class imbalance (ra
 # Label smoothing helps model handle ambiguous cases and prevents overfitting to common emotions
 
 # Learning Rate Scheduling
-LR_SCHEDULER = "CosineAnnealingLR"  # Changed to CosineAnnealingLR - better for longer training
+LR_SCHEDULER = "ReduceLROnPlateau"  # Back to ReduceLROnPlateau - more stable, responds to validation loss
 LR_FACTOR = 0.5  # Factor to reduce LR by (for ReduceLROnPlateau)
 LR_PATIENCE = 5  # Epochs to wait before reducing LR (for ReduceLROnPlateau)
 LR_MIN = 1e-6  # Minimum learning rate
-LR_T_MAX = 50  # Period for cosine annealing (restart every 50 epochs)
+LR_T_MAX = 50  # Period for cosine annealing (restart every 50 epochs) - not used with ReduceLROnPlateau
 
 # Early Stopping
 EARLY_STOPPING = True
