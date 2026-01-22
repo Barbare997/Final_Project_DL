@@ -1,31 +1,24 @@
 import torch
 from torchvision import transforms
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
-from collections import Counter
 import numpy as np
 from PIL import Image
 
 def get_train_transforms():
-    """Data augmentation for emotion recognition - designed for facial expressions"""
     return transforms.Compose([
-        transforms.Resize((48, 48)),  # Safety resize (images should already be 48x48)
-        transforms.Grayscale(num_output_channels=1),  # Ensure grayscale (1 channel) - ImageFolder may convert to RGB
-        transforms.RandomRotation(degrees=25),   # Increased to 25° - more variation for rare classes
-        transforms.RandomAffine(degrees=0, translate=(0.2, 0.2), scale=(0.8, 1.2)),  # More aggressive augmentation
-        transforms.RandomApply([transforms.ColorJitter(brightness=0.2, contrast=0.2)], p=0.3),  # Brightness/contrast variation (even for grayscale, helps with lighting)
-        # Note: No horizontal flip - facial expressions are asymmetric (e.g., raised eyebrow on one side conveys different emotion info)
-        transforms.ToTensor(),  # Converts PIL to tensor and scales to [0,1]
-        transforms.Normalize(mean=[0.5], std=[0.5])  # Normalize to [-1, 1] range for 1 channel
+        transforms.Resize((48, 48)),
+        transforms.Grayscale(num_output_channels=1),
+        transforms.RandomRotation(degrees=10),
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(1.0, 1.0)),
+        transforms.ToTensor(),
     ])
 
 def get_val_test_transforms():
-    """No augmentation for validation/test - just normalize"""
     return transforms.Compose([
-        transforms.Resize((48, 48)),  # Safety resize (images should already be 48x48)
-        transforms.Grayscale(num_output_channels=1),  # Ensure grayscale (1 channel) - ImageFolder may convert to RGB
-        transforms.ToTensor(),  # Converts PIL to tensor and scales to [0,1]
-        transforms.Normalize(mean=[0.5], std=[0.5])  # Normalize to [-1, 1] range for 1 channel
+        transforms.Resize((48, 48)),
+        transforms.Grayscale(num_output_channels=1),
+        transforms.ToTensor(),
     ])
 
 def get_data_loaders(data_dir, batch_size=64, num_workers=2):
@@ -49,22 +42,10 @@ def get_data_loaders(data_dir, batch_size=64, num_workers=2):
         transform=get_val_test_transforms()
     )
     
-    # Handle class imbalance: FER-2013 has severe imbalance (e.g., disgust ~436 vs happy ~7215)
-    # Weighted sampling ensures model sees rare emotions (disgust, fear) more often during training
-    # This prevents model from only learning common emotions (happy, neutral)
-    train_labels = [label for _, label in train_dataset.samples]
-    class_counts = Counter(train_labels)
-    total_samples = len(train_labels)
-    
-    # Calculate weights: inverse frequency - rare emotions get higher weights
-    weights = torch.DoubleTensor([total_samples / class_counts[label] for label in train_labels])
-    sampler = WeightedRandomSampler(weights, num_samples=len(weights), replacement=True)
-    
-    # Create data loaders
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
-        sampler=sampler,  # Use weighted sampler instead of shuffle
+        shuffle=True,
         num_workers=num_workers,
         pin_memory=True if torch.cuda.is_available() else False
     )
