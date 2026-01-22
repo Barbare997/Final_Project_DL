@@ -15,7 +15,7 @@ class EmotionCNN(nn.Module):
         self.conv4 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
         self.dropout2 = nn.Dropout2d(0.22)
 
-        self.fc1 = nn.Linear(128 * 4 * 4, 512)
+        self.fc1 = nn.Linear(128 * 6 * 6, 512)
         self.dropout3 = nn.Dropout(0.5)
         self.fc2 = nn.Linear(512, 256)
         self.dropout4 = nn.Dropout(0.5)
