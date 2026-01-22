@@ -80,6 +80,9 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, current_e
             param_group['lr'] = param_group['initial_lr'] * warmup_factor
     
     # Process each batch of images
+    total_grad_norm = 0.0
+    num_batches = 0
+    
     for images, labels in tqdm(train_loader, desc="Training"):
         # Move data to GPU if available
         images = images.to(device)
@@ -97,8 +100,10 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, current_e
         # Backward pass: compute gradients
         loss.backward()
         
-        # Gradient clipping for stability (helps with deeper models)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        # Calculate gradient norm for monitoring
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
+        total_grad_norm += grad_norm.item()
+        num_batches += 1
         
         # Update model weights using optimizer
         optimizer.step()
@@ -111,11 +116,14 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, current_e
         total_samples += labels.size(0)
         correct_predictions += (predicted_classes == labels).sum().item()
     
+    # Calculate average gradient norm
+    avg_grad_norm = total_grad_norm / num_batches if num_batches > 0 else 0.0
+    
     # Calculate average loss and accuracy for this epoch
     average_loss = running_loss / len(train_loader)
     accuracy = 100 * correct_predictions / total_samples
     
-    return average_loss, accuracy
+    return average_loss, accuracy, avg_grad_norm
 
 
 def validate_model(model, val_loader, criterion, device):
@@ -294,26 +302,27 @@ def main():
     print(f"Total parameters: {total_params:,}")
     print(f"Trainable parameters: {trainable_params:,}")
     
-    # Calculate balanced class weights (square root of inverse frequency - less extreme)
+    # Calculate balanced class weights (more conservative approach)
     # Since we already use WeightedRandomSampler, we use milder class weights in loss
     from collections import Counter
     train_labels = [label for _, label in train_loader.dataset.samples]
     class_counts = Counter(train_labels)
     total_samples = len(train_labels)
     
-    # Use square root of inverse frequency to reduce extreme weights
-    # This prevents model from collapsing to rarest class while still helping rare classes
+    # Use cube root of inverse frequency - even milder than square root
+    # This prevents extreme weights that can destabilize training
     class_weights = torch.FloatTensor([
-        (total_samples / class_counts[i]) ** 0.5 for i in range(len(class_names))
+        (total_samples / class_counts[i]) ** (1.0/3.0) for i in range(len(class_names))
     ]).to(device)
     
     # Normalize weights so they don't dominate the loss
     class_weights = class_weights / class_weights.mean()
     
-    # Cap maximum weight to prevent overcompensation (disgust was getting 2.44)
+    # Cap maximum weight more conservatively to prevent overcompensation
     # This prevents model from overpredicting rare classes
-    max_weight = 1.5  # Cap at 1.5x average weight
-    class_weights = torch.clamp(class_weights, min=0.5, max=max_weight)
+    max_weight = 1.3  # Reduced from 1.5 - more conservative
+    min_weight = 0.7  # Increased from 0.5 - less extreme minimum
+    class_weights = torch.clamp(class_weights, min=min_weight, max=max_weight)
     
     print(f"\nClass distribution: {dict(class_counts)}")
     print(f"Class weights (normalized): {dict(zip(class_names, class_weights.cpu().numpy()))}")
@@ -384,7 +393,7 @@ def main():
         print("-" * 70)
         
         # Train for one epoch
-        train_loss, train_acc = train_one_epoch(
+        train_loss, train_acc, avg_grad_norm = train_one_epoch(
             model, train_loader, criterion, optimizer, device, epoch, WARMUP_EPOCHS
         )
         train_losses.append(train_loss)
@@ -404,11 +413,40 @@ def main():
             scheduler.step(val_loss)  # ReduceLROnPlateau needs validation loss
         current_lr = optimizer.param_groups[0]['lr']
         
+        # Calculate per-class accuracy for validation (diagnostic)
+        from collections import Counter
+        val_class_counts = Counter(val_labels)
+        val_class_correct = Counter()
+        pred_class_counts = Counter(val_predictions)  # Track what classes model is predicting
+        
+        for pred, label in zip(val_predictions, val_labels):
+            if pred == label:
+                val_class_correct[label] += 1
+        
         # Print epoch results
         print(f"\nResults:")
         print(f"  Training   - Loss: {train_loss:.4f}, Accuracy: {train_acc:.2f}%")
         print(f"  Validation - Loss: {val_loss:.4f}, Accuracy: {val_acc:.2f}%")
         print(f"  Learning Rate: {current_lr:.6f}")
+        print(f"  Avg Gradient Norm: {avg_grad_norm:.4f}")  # Monitor gradient flow
+        
+        # Diagnostic: Check if model is stuck predicting one class
+        if len(pred_class_counts) == 1:
+            dominant_class = list(pred_class_counts.keys())[0]
+            print(f"\n  ⚠️  WARNING: Model predicting only class '{class_names[dominant_class]}' for all samples!")
+            print(f"     This indicates the model is not learning. Check:")
+            print(f"     - Learning rate might be too low")
+            print(f"     - Class weights might be too extreme")
+            print(f"     - Gradient flow (should be > 0.01)")
+        
+        # Print per-class validation accuracy (diagnostic - helps identify if model is stuck on one class)
+        if epoch == 1 or epoch % 5 == 0:  # Print every 5 epochs to avoid clutter
+            print(f"\n  Per-class validation accuracy:")
+            for i, class_name in enumerate(class_names):
+                if i in val_class_counts:
+                    class_acc = 100.0 * val_class_correct.get(i, 0) / val_class_counts[i]
+                    pred_count = pred_class_counts.get(i, 0)
+                    print(f"    {class_name}: {class_acc:.2f}% ({val_class_correct.get(i, 0)}/{val_class_counts[i]}) [predicted: {pred_count} times]")
         
         # Save best model
         if val_acc > best_val_accuracy:

@@ -40,7 +40,7 @@ TRACK_CONFUSING_PAIRS = True  # Set to True to analyze confusion between these p
 # Training
 BATCH_SIZE = 64
 NUM_EPOCHS = 100  # Increased from 50 - model was still improving at epoch 50
-LEARNING_RATE = 0.0005  # Keep at 0.0005 - 0.001 was too high and caused instability
+LEARNING_RATE = 0.001  # Increased from 0.0005 - model needs higher LR to learn initially
 NUM_WORKERS = 2
 WARMUP_EPOCHS = 3  # Reduced from 5 - shorter warmup, start learning faster
 
@@ -49,8 +49,9 @@ OPTIMIZER = "Adam"  # Options: "Adam" or "SGD"
 WEIGHT_DECAY = 0.0001  # L2 regularization
 
 # Loss Function
-LABEL_SMOOTHING = 0.1  # Prevents overconfidence, helps with class imbalance (rare emotions like disgust)
+LABEL_SMOOTHING = 0.0  # Disabled initially - was preventing model from learning. Can re-enable later if overfitting
 # Label smoothing helps model handle ambiguous cases and prevents overfitting to common emotions
+# But it can interfere with initial learning, so we start without it
 
 # Learning Rate Scheduling
 LR_SCHEDULER = "ReduceLROnPlateau"  # Back to ReduceLROnPlateau - more stable, responds to validation loss

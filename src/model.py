@@ -25,23 +25,24 @@ class EmotionCNN(nn.Module):
         # 48x48 -> 24x24 after pooling
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
         nn.init.kaiming_normal_(self.conv1.weight, mode='fan_out', nonlinearity='relu')
-        self.bn1 = nn.BatchNorm2d(32)
+        self.bn1 = nn.BatchNorm2d(32, momentum=0.1)  # Lower momentum for faster adaptation
 
         # Second conv block: Identifies facial regions (eyes, mouth, eyebrows)
         # 24x24 -> 12x12 after pooling
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         nn.init.kaiming_normal_(self.conv2.weight, mode='fan_out', nonlinearity='relu')
-        self.bn2 = nn.BatchNorm2d(64)
+        self.bn2 = nn.BatchNorm2d(64, momentum=0.1)  # Lower momentum for faster adaptation
 
         # Third conv block: Learns emotion-specific patterns (smile curvature, eyebrow position)
         # 12x12 -> 6x6 after pooling - optimal spatial resolution for emotion features
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         nn.init.kaiming_normal_(self.conv3.weight, mode='fan_out', nonlinearity='relu')
-        self.bn3 = nn.BatchNorm2d(128)
+        self.bn3 = nn.BatchNorm2d(128, momentum=0.1)  # Lower momentum for faster adaptation
 
         self.pool = nn.MaxPool2d(2, 2)
-        self.dropout_conv = nn.Dropout2d(0.25)  # Prevents overfitting on common emotions (happy, neutral)
-        self.dropout_fc = nn.Dropout(0.5)  # Dropout for FC layers
+        # Reduced dropout - start with lower values, can increase later if overfitting
+        self.dropout_conv = nn.Dropout2d(0.1)  # Reduced from 0.25 - too aggressive early in training
+        self.dropout_fc = nn.Dropout(0.3)  # Reduced from 0.5 - allow model to learn first
 
         # Classification layers: Maps 6x6 feature maps to 7 emotion categories
         # 3 FC layers for better feature learning (increased capacity without losing spatial info)
