@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report
 import numpy as np
@@ -59,13 +59,13 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, current_e
     Train the model for one complete pass through the training data.
     
     This function:
-    1. Sets model to training mode (enables dropout, batch norm updates)
+    1. Sets model to training mode (enables dropout)
     2. Processes batches of images
     3. Computes loss and gradients
     4. Updates model weights
     5. Tracks accuracy and loss statistics
     """
-    model.train()  # Enable dropout and batch norm training behavior
+    model.train()
     running_loss = 0.0
     correct_predictions = 0
     total_samples = 0
@@ -88,15 +88,13 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, current_e
         # Forward pass: get predictions from model
         predictions = model(images)
         
-        # Calculate loss (Focal Loss or weighted CrossEntropy)
+        # Calculate loss
         loss = criterion(predictions, labels)
         
         # Backward pass: compute gradients
         loss.backward()
         
-        # Gradient clipping for stability (helps with deeper models)
-        # Increased max_norm to allow larger gradients (was 1.0, now 5.0)
-        # Low gradient norm (0.3) suggests gradients are being clipped too aggressively
+        # Gradient clipping for stability
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
         
         # Update model weights using optimizer
@@ -122,12 +120,12 @@ def validate_model(model, val_loader, criterion, device):
     Evaluate the model on validation data.
     
     This function:
-    1. Sets model to evaluation mode (disables dropout, freezes batch norm)
+    1. Sets model to evaluation mode (disables dropout)
     2. Processes validation batches without computing gradients (faster)
     3. Collects all predictions and labels for analysis
     4. Returns loss, accuracy, and prediction arrays
     """
-    model.eval()  # Disable dropout and batch norm updates
+    model.eval()
     running_loss = 0.0
     correct_predictions = 0
     total_samples = 0
@@ -293,59 +291,29 @@ def main():
     print(f"Total parameters: {total_params:,}")
     print(f"Trainable parameters: {trainable_params:,}")
     
-    # Calculate balanced class weights (square root of inverse frequency - less extreme)
-    # Since we already use WeightedRandomSampler, we use milder class weights in loss
-    from collections import Counter
-    train_labels = [label for _, label in train_loader.dataset.samples]
-    class_counts = Counter(train_labels)
-    total_samples = len(train_labels)
-    
-    # Use square root of inverse frequency to reduce extreme weights
-    # This prevents model from collapsing to rarest class while still helping rare classes
-    class_weights = torch.FloatTensor([
-        (total_samples / class_counts[i]) ** 0.5 for i in range(len(class_names))
-    ]).to(device)
-    
-    # Normalize weights so they don't dominate the loss
-    class_weights = class_weights / class_weights.mean()
-    
-    # Cap maximum weight to prevent overcompensation (disgust was getting 2.44)
-    # This prevents model from overpredicting rare classes
-    # Further reduced cap - even 1.2 was causing issues
-    max_weight = 1.1  # Very conservative cap - prevent any single class from dominating
-    class_weights = torch.clamp(class_weights, min=0.8, max=max_weight)  # Narrow range
-    
-    print(f"\nClass distribution: {dict(class_counts)}")
-    print(f"Class weights (normalized): {dict(zip(class_names, class_weights.cpu().numpy()))}")
-    print("NOTE: Class weights calculated but NOT used in loss (WeightedRandomSampler handles imbalance)")
-    
-    # Setup loss function: NO class weights in loss!
-    # CRITICAL: WeightedRandomSampler already handles class imbalance by oversampling rare classes
-    # Adding class weights to loss = DOUBLE PENALTY = model collapse to rarest class (disgust)
-    # Solution: Use WeightedRandomSampler OR class weights in loss, NOT BOTH
     if USE_FOCAL_LOSS:
         criterion = FocalLoss(
             alpha=FOCAL_ALPHA,
             gamma=FOCAL_GAMMA,
-            weight=None,  # NO class weights - WeightedRandomSampler handles imbalance
+            weight=None,
             label_smoothing=LABEL_SMOOTHING
         )
-        print(f"\nLoss function: Focal Loss (alpha={FOCAL_ALPHA}, gamma={FOCAL_GAMMA}) with label smoothing = {LABEL_SMOOTHING}")
+        print(f"\nLoss function: Focal Loss")
     else:
-        # Standard CrossEntropy - NO class weights
-        criterion = nn.CrossEntropyLoss(weight=None, label_smoothing=LABEL_SMOOTHING)
-        print(f"\nLoss function: CrossEntropyLoss with label smoothing = {LABEL_SMOOTHING}")
-    print("  Strategy: WeightedRandomSampler handles class imbalance (oversamples rare classes)")
+        criterion = nn.CrossEntropyLoss()
+        print(f"\nLoss function: CrossEntropyLoss")
     
     # Setup optimizer - use learning rate from config
     # Removed hardcoded 0.0005 - was too low and prevented learning (model stuck at 14% accuracy)
     if OPTIMIZER.lower() == "adam":
         optimizer = optim.Adam(
             model.parameters(),
-            lr=LEARNING_RATE,  # Use config learning rate
+            lr=LEARNING_RATE,
+            betas=(0.9, 0.999),
+            eps=1e-7,
             weight_decay=WEIGHT_DECAY
         )
-        print(f"Optimizer: Adam (lr={LEARNING_RATE}, weight_decay={WEIGHT_DECAY})")
+        print(f"Optimizer: Adam (lr={LEARNING_RATE})")
     else:
         optimizer = optim.SGD(
             model.parameters(),
@@ -356,18 +324,14 @@ def main():
         print(f"Optimizer: SGD (lr={LEARNING_RATE}, momentum=0.9, weight_decay={WEIGHT_DECAY})")
     
     # Setup learning rate scheduler
-    if LR_SCHEDULER == "CosineAnnealingLR":
-        scheduler = CosineAnnealingLR(optimizer, T_max=LR_T_MAX, eta_min=LR_MIN)
-        print(f"Learning rate scheduler: CosineAnnealingLR (T_max={LR_T_MAX}, eta_min={LR_MIN})")
-    else:
-        scheduler = ReduceLROnPlateau(
-            optimizer,
-            mode='min',  # Reduce LR when validation loss stops decreasing
-            factor=LR_FACTOR,  # Multiply LR by this factor
-            patience=LR_PATIENCE,  # Wait this many epochs before reducing
-            min_lr=LR_MIN  # Don't reduce below this
-        )
-        print(f"Learning rate scheduler: ReduceLROnPlateau (factor={LR_FACTOR}, patience={LR_PATIENCE})")
+    scheduler = ReduceLROnPlateau(
+        optimizer,
+        mode='min',
+        factor=LR_FACTOR,
+        patience=LR_PATIENCE,
+        min_lr=LR_MIN
+    )
+    print(f"Learning rate scheduler: ReduceLROnPlateau (factor={LR_FACTOR}, patience={LR_PATIENCE})")
     
     # Training history tracking
     train_losses = []
@@ -390,7 +354,7 @@ def main():
         
         # Train for one epoch
         train_loss, train_acc = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, epoch, WARMUP_EPOCHS
+            model, train_loader, criterion, optimizer, device, epoch, 0
         )
         train_losses.append(train_loss)
         train_accuracies.append(train_acc)
@@ -403,10 +367,7 @@ def main():
         val_accuracies.append(val_acc)
         
         # Update learning rate
-        if LR_SCHEDULER == "CosineAnnealingLR":
-            scheduler.step()  # CosineAnnealingLR doesn't need validation loss
-        else:
-            scheduler.step(val_loss)  # ReduceLROnPlateau needs validation loss
+        scheduler.step(val_loss)
         current_lr = optimizer.param_groups[0]['lr']
         
         # Print epoch results
