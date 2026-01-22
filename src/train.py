@@ -248,9 +248,24 @@ def main():
     print(f"Total parameters: {total_params:,}")
     print(f"Trainable parameters: {trainable_params:,}")
     
-    # Setup loss function with label smoothing
-    criterion = nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING)
-    print(f"\nLoss function: CrossEntropyLoss with label smoothing = {LABEL_SMOOTHING}")
+    # Calculate class weights for loss function (inverse frequency)
+    # This penalizes misclassifying rare emotions more heavily
+    from collections import Counter
+    train_labels = [label for _, label in train_loader.dataset.samples]
+    class_counts = Counter(train_labels)
+    total_samples = len(train_labels)
+    
+    # Calculate weights: inverse frequency - rare emotions get higher weights
+    class_weights = torch.FloatTensor([
+        total_samples / class_counts[i] for i in range(len(class_names))
+    ]).to(device)
+    
+    print(f"\nClass distribution: {dict(class_counts)}")
+    print(f"Class weights: {dict(zip(class_names, class_weights.cpu().numpy()))}")
+    
+    # Setup loss function with class weights and label smoothing
+    criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=LABEL_SMOOTHING)
+    print(f"\nLoss function: CrossEntropyLoss with class weights + label smoothing = {LABEL_SMOOTHING}")
     
     # Setup optimizer
     if OPTIMIZER.lower() == "adam":
