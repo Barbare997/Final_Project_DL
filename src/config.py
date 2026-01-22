@@ -65,7 +65,7 @@ EARLY_STOP_PATIENCE = 15  # Increased from 10 - allow more time for deeper model
 EARLY_STOP_MIN_DELTA = 0.001  # Minimum change to qualify as improvement
 
 # Focal Loss (helps with hard examples like fear, angry)
-USE_FOCAL_LOSS = True  # Set to True to use Focal Loss instead of weighted CrossEntropy
+USE_FOCAL_LOSS = False  # Temporarily disabled - was causing model collapse. Use weighted CrossEntropy instead
 FOCAL_ALPHA = 0.25  # Balancing factor for rare classes
 FOCAL_GAMMA = 2.0  # Focusing parameter (higher = more focus on hard examples)
 
