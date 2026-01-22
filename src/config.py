@@ -40,7 +40,7 @@ TRACK_CONFUSING_PAIRS = True  # Set to True to analyze confusion between these p
 # Training
 BATCH_SIZE = 64
 NUM_EPOCHS = 100  # Increased from 50 - model was still improving at epoch 50
-LEARNING_RATE = 0.0005  # Safe learning rate - 0.001 was too high and caused instability
+LEARNING_RATE = 0.001  # Increased back to 0.001 - 0.0005 was too low, model wasn't learning (stuck at 14% accuracy)
 NUM_WORKERS = 2
 WARMUP_EPOCHS = 0  # Disabled - was causing instability with ReduceLROnPlateau
 

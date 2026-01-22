@@ -337,16 +337,15 @@ def main():
         print(f"\nLoss function: CrossEntropyLoss with label smoothing = {LABEL_SMOOTHING}")
     print("  Strategy: WeightedRandomSampler handles class imbalance (oversamples rare classes)")
     
-    # Setup optimizer - use safe learning rate (0.0005) to prevent instability
-    # Force to 0.0005 regardless of config to prevent collapse
-    safe_lr = 0.0005
+    # Setup optimizer - use learning rate from config
+    # Removed hardcoded 0.0005 - was too low and prevented learning (model stuck at 14% accuracy)
     if OPTIMIZER.lower() == "adam":
         optimizer = optim.Adam(
             model.parameters(),
-            lr=safe_lr,  # Force safe learning rate
+            lr=LEARNING_RATE,  # Use config learning rate
             weight_decay=WEIGHT_DECAY
         )
-        print(f"Optimizer: Adam (lr={safe_lr}, weight_decay={WEIGHT_DECAY})")
+        print(f"Optimizer: Adam (lr={LEARNING_RATE}, weight_decay={WEIGHT_DECAY})")
     else:
         optimizer = optim.SGD(
             model.parameters(),
