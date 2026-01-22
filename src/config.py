@@ -15,13 +15,8 @@ IMG_SIZE = 48
 # Emotion class mapping (FER-2013 order)
 EMOTION_CLASSES = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
 
-# Emotion recognition specific settings
-# Rare emotions need special attention due to class imbalance
-# Handling strategy: WeightedRandomSampler in utils.py (inverse frequency weighting)
-# - Rare emotions (disgust, fear) get higher sampling weights
-# - Ensures model sees all emotions during training, not just common ones
-RARE_EMOTIONS = ['disgust', 'fear']  # These have fewest samples in FER-2013 (~436 and ~4097 respectively)
-COMMON_EMOTIONS = ['happy', 'neutral']  # Most frequent emotions (~7215 and ~4965 respectively)
+RARE_EMOTIONS = ['disgust', 'fear']
+COMMON_EMOTIONS = ['happy', 'neutral']
 
 # Emotion pairs that are often confused (FER-2013 specific)
 # Strategies to handle:
@@ -39,34 +34,32 @@ TRACK_CONFUSING_PAIRS = True  # Set to True to analyze confusion between these p
 
 # Training
 BATCH_SIZE = 64
-NUM_EPOCHS = 100  # Increased from 50 - model was still improving at epoch 50
-LEARNING_RATE = 0.001  # Increased back to 0.001 - 0.0005 was too low, model wasn't learning (stuck at 14% accuracy)
+NUM_EPOCHS = 40
+LEARNING_RATE = 0.001
 NUM_WORKERS = 2
-WARMUP_EPOCHS = 0  # Disabled - was causing instability with ReduceLROnPlateau
 
 # Optimizer
-OPTIMIZER = "Adam"  # Options: "Adam" or "SGD"
-WEIGHT_DECAY = 0.0001  # L2 regularization
+OPTIMIZER = "Adam"
+WEIGHT_DECAY = 0.0
 
 # Loss Function
-LABEL_SMOOTHING = 0.05  # Light label smoothing - helps with class imbalance without being too aggressive
+LABEL_SMOOTHING = 0.0
 
 # Learning Rate Scheduling
-LR_SCHEDULER = "ReduceLROnPlateau"  # More stable - responds to validation loss, not time-based
-LR_FACTOR = 0.5  # Factor to reduce LR by (for ReduceLROnPlateau)
-LR_PATIENCE = 8  # Increased patience - wait longer before reducing LR
-LR_MIN = 1e-6  # Minimum learning rate
-LR_T_MAX = 50  # Period for cosine annealing (not used with ReduceLROnPlateau)
+LR_SCHEDULER = "ReduceLROnPlateau"
+LR_FACTOR = 0.1
+LR_PATIENCE = 1
+LR_MIN = 1e-7
 
 # Early Stopping
-EARLY_STOPPING = True
-EARLY_STOP_PATIENCE = 20  # Increased - model needs more time, validation accuracy is fluctuating
-EARLY_STOP_MIN_DELTA = 0.001  # Minimum change to qualify as improvement
+EARLY_STOPPING = False
+EARLY_STOP_PATIENCE = 10
+EARLY_STOP_MIN_DELTA = 0.001
 
-# Focal Loss (helps with hard examples like fear, angry)
-USE_FOCAL_LOSS = False  # Temporarily disabled - was causing model collapse. Use weighted CrossEntropy instead
-FOCAL_ALPHA = 0.25  # Balancing factor for rare classes
-FOCAL_GAMMA = 2.0  # Focusing parameter (higher = more focus on hard examples)
+# Focal Loss
+USE_FOCAL_LOSS = False
+FOCAL_ALPHA = 0.25
+FOCAL_GAMMA = 2.0
 
 # Model
 DROPOUT_RATE = 0.5
