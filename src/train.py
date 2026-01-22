@@ -6,8 +6,9 @@ validation, model saving, and visualization of results.
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingLR
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report
 import numpy as np
@@ -20,7 +21,40 @@ from config import *
 from utils import get_data_loaders, analyze_confusing_pairs
 
 
-def train_one_epoch(model, train_loader, criterion, optimizer, device):
+class FocalLoss(nn.Module):
+    """
+    Focal Loss for addressing class imbalance and hard examples.
+    Focuses learning on hard-to-classify examples (like fear, angry).
+    """
+    def __init__(self, alpha=0.25, gamma=2.0, weight=None, label_smoothing=0.0):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.weight = weight
+        self.label_smoothing = label_smoothing
+        
+    def forward(self, inputs, targets):
+        # Apply label smoothing if specified
+        if self.label_smoothing > 0:
+            num_classes = inputs.size(1)
+            smooth_targets = torch.zeros_like(inputs)
+            smooth_targets.fill_(self.label_smoothing / (num_classes - 1))
+            smooth_targets.scatter_(1, targets.unsqueeze(1), 1.0 - self.label_smoothing)
+            targets_one_hot = smooth_targets
+        else:
+            targets_one_hot = F.one_hot(targets, num_classes=inputs.size(1)).float()
+        
+        # Compute cross entropy
+        ce_loss = F.cross_entropy(inputs, targets, weight=self.weight, reduction='none')
+        pt = torch.exp(-ce_loss)  # Probability of true class
+        
+        # Compute focal loss
+        focal_loss = self.alpha * (1 - pt) ** self.gamma * ce_loss
+        
+        return focal_loss.mean()
+
+
+def train_one_epoch(model, train_loader, criterion, optimizer, device, current_epoch=0, warmup_epochs=0):
     """
     Train the model for one complete pass through the training data.
     
@@ -36,6 +70,12 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
     correct_predictions = 0
     total_samples = 0
     
+    # Learning rate warmup for first few epochs
+    if warmup_epochs > 0 and current_epoch < warmup_epochs:
+        warmup_factor = (current_epoch + 1) / warmup_epochs
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = param_group.get('initial_lr', LEARNING_RATE) * warmup_factor
+    
     # Process each batch of images
     for images, labels in tqdm(train_loader, desc="Training"):
         # Move data to GPU if available
@@ -48,11 +88,14 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
         # Forward pass: get predictions from model
         predictions = model(images)
         
-        # Calculate loss (with label smoothing if configured)
+        # Calculate loss (Focal Loss or weighted CrossEntropy)
         loss = criterion(predictions, labels)
         
         # Backward pass: compute gradients
         loss.backward()
+        
+        # Gradient clipping for stability (helps with deeper models)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         
         # Update model weights using optimizer
         optimizer.step()
@@ -264,13 +307,28 @@ def main():
     # Normalize weights so they don't dominate the loss
     class_weights = class_weights / class_weights.mean()
     
+    # Cap maximum weight to prevent overcompensation (disgust was getting 2.44)
+    # This prevents model from overpredicting rare classes
+    max_weight = 1.5  # Cap at 1.5x average weight
+    class_weights = torch.clamp(class_weights, min=0.5, max=max_weight)
+    
     print(f"\nClass distribution: {dict(class_counts)}")
     print(f"Class weights (normalized): {dict(zip(class_names, class_weights.cpu().numpy()))}")
     
-    # Setup loss function with balanced class weights and label smoothing
-    # Note: We use milder weights since WeightedRandomSampler already handles sampling
-    criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=LABEL_SMOOTHING)
-    print(f"\nLoss function: CrossEntropyLoss with balanced class weights + label smoothing = {LABEL_SMOOTHING}")
+    # Setup loss function: Focal Loss or weighted CrossEntropy
+    if USE_FOCAL_LOSS:
+        # Focal Loss focuses on hard examples (fear, angry) which are currently poorly detected
+        criterion = FocalLoss(
+            alpha=FOCAL_ALPHA,
+            gamma=FOCAL_GAMMA,
+            weight=class_weights,
+            label_smoothing=LABEL_SMOOTHING
+        )
+        print(f"\nLoss function: Focal Loss (alpha={FOCAL_ALPHA}, gamma={FOCAL_GAMMA}) with class weights + label smoothing = {LABEL_SMOOTHING}")
+    else:
+        # Standard weighted CrossEntropy
+        criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=LABEL_SMOOTHING)
+        print(f"\nLoss function: CrossEntropyLoss with balanced class weights + label smoothing = {LABEL_SMOOTHING}")
     
     # Setup optimizer
     if OPTIMIZER.lower() == "adam":
@@ -290,14 +348,18 @@ def main():
         print(f"Optimizer: SGD (lr={LEARNING_RATE}, momentum=0.9, weight_decay={WEIGHT_DECAY})")
     
     # Setup learning rate scheduler
-    scheduler = ReduceLROnPlateau(
-        optimizer,
-        mode='min',  # Reduce LR when validation loss stops decreasing
-        factor=LR_FACTOR,  # Multiply LR by this factor
-        patience=LR_PATIENCE,  # Wait this many epochs before reducing
-        min_lr=LR_MIN  # Don't reduce below this
-    )
-    print(f"Learning rate scheduler: ReduceLROnPlateau (factor={LR_FACTOR}, patience={LR_PATIENCE})")
+    if LR_SCHEDULER == "CosineAnnealingLR":
+        scheduler = CosineAnnealingLR(optimizer, T_max=LR_T_MAX, eta_min=LR_MIN)
+        print(f"Learning rate scheduler: CosineAnnealingLR (T_max={LR_T_MAX}, eta_min={LR_MIN})")
+    else:
+        scheduler = ReduceLROnPlateau(
+            optimizer,
+            mode='min',  # Reduce LR when validation loss stops decreasing
+            factor=LR_FACTOR,  # Multiply LR by this factor
+            patience=LR_PATIENCE,  # Wait this many epochs before reducing
+            min_lr=LR_MIN  # Don't reduce below this
+        )
+        print(f"Learning rate scheduler: ReduceLROnPlateau (factor={LR_FACTOR}, patience={LR_PATIENCE})")
     
     # Training history tracking
     train_losses = []
@@ -320,7 +382,7 @@ def main():
         
         # Train for one epoch
         train_loss, train_acc = train_one_epoch(
-            model, train_loader, criterion, optimizer, device
+            model, train_loader, criterion, optimizer, device, epoch, WARMUP_EPOCHS
         )
         train_losses.append(train_loss)
         train_accuracies.append(train_acc)
@@ -332,8 +394,11 @@ def main():
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
         
-        # Update learning rate based on validation loss
-        scheduler.step(val_loss)
+        # Update learning rate
+        if LR_SCHEDULER == "CosineAnnealingLR":
+            scheduler.step()  # CosineAnnealingLR doesn't need validation loss
+        else:
+            scheduler.step(val_loss)  # ReduceLROnPlateau needs validation loss
         current_lr = optimizer.param_groups[0]['lr']
         
         # Print epoch results

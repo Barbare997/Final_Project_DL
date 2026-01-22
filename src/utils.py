@@ -11,8 +11,9 @@ def get_train_transforms():
     return transforms.Compose([
         transforms.Resize((48, 48)),  # Safety resize (images should already be 48x48)
         transforms.Grayscale(num_output_channels=1),  # Ensure grayscale (1 channel) - ImageFolder may convert to RGB
-        transforms.RandomRotation(degrees=15),   # Moderate rotations (±15°) - real faces can have tilt, helps with angle variation
-        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),  # Small shifts and zoom - accounts for imperfect face detection/alignment
+        transforms.RandomRotation(degrees=25),   # Increased to 25° - more variation for rare classes
+        transforms.RandomAffine(degrees=0, translate=(0.2, 0.2), scale=(0.8, 1.2)),  # More aggressive augmentation
+        transforms.RandomApply([transforms.ColorJitter(brightness=0.2, contrast=0.2)], p=0.3),  # Brightness/contrast variation (even for grayscale, helps with lighting)
         # Note: No horizontal flip - facial expressions are asymmetric (e.g., raised eyebrow on one side conveys different emotion info)
         transforms.ToTensor(),  # Converts PIL to tensor and scales to [0,1]
         transforms.Normalize(mean=[0.5], std=[0.5])  # Normalize to [-1, 1] range for 1 channel

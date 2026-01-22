@@ -39,9 +39,10 @@ TRACK_CONFUSING_PAIRS = True  # Set to True to analyze confusion between these p
 
 # Training
 BATCH_SIZE = 64
-NUM_EPOCHS = 50
-LEARNING_RATE = 0.0005  # Reduced from 0.001 - more stable with class weights
+NUM_EPOCHS = 100  # Increased from 50 - model was still improving at epoch 50
+LEARNING_RATE = 0.0005  # Keep at 0.0005 - 0.001 was too high and caused instability
 NUM_WORKERS = 2
+WARMUP_EPOCHS = 5  # Learning rate warmup for better training stability
 
 # Optimizer
 OPTIMIZER = "Adam"  # Options: "Adam" or "SGD"
@@ -52,15 +53,21 @@ LABEL_SMOOTHING = 0.1  # Prevents overconfidence, helps with class imbalance (ra
 # Label smoothing helps model handle ambiguous cases and prevents overfitting to common emotions
 
 # Learning Rate Scheduling
-LR_SCHEDULER = "ReduceLROnPlateau"  # Options: "ReduceLROnPlateau", "StepLR", "CosineAnnealingLR"
-LR_FACTOR = 0.5  # Factor to reduce LR by
-LR_PATIENCE = 5  # Epochs to wait before reducing LR
+LR_SCHEDULER = "CosineAnnealingLR"  # Changed to CosineAnnealingLR - better for longer training
+LR_FACTOR = 0.5  # Factor to reduce LR by (for ReduceLROnPlateau)
+LR_PATIENCE = 5  # Epochs to wait before reducing LR (for ReduceLROnPlateau)
 LR_MIN = 1e-6  # Minimum learning rate
+LR_T_MAX = 50  # Period for cosine annealing (restart every 50 epochs)
 
 # Early Stopping
 EARLY_STOPPING = True
-EARLY_STOP_PATIENCE = 10  # Epochs to wait before stopping
+EARLY_STOP_PATIENCE = 15  # Increased from 10 - allow more time for deeper model to converge
 EARLY_STOP_MIN_DELTA = 0.001  # Minimum change to qualify as improvement
+
+# Focal Loss (helps with hard examples like fear, angry)
+USE_FOCAL_LOSS = True  # Set to True to use Focal Loss instead of weighted CrossEntropy
+FOCAL_ALPHA = 0.25  # Balancing factor for rare classes
+FOCAL_GAMMA = 2.0  # Focusing parameter (higher = more focus on hard examples)
 
 # Model
 DROPOUT_RATE = 0.5
