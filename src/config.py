@@ -40,25 +40,24 @@ TRACK_CONFUSING_PAIRS = True  # Set to True to analyze confusion between these p
 # Training
 BATCH_SIZE = 64
 NUM_EPOCHS = 100  # Increased from 50 - model was still improving at epoch 50
-LEARNING_RATE = 0.001  # Increased from 0.0005 - model needs higher LR to learn initially
+LEARNING_RATE = 0.001  # Increased to 0.001 - model needs higher LR to learn (was stuck at 0.0005)
 NUM_WORKERS = 2
-WARMUP_EPOCHS = 3  # Reduced from 5 - shorter warmup, start learning faster
+WARMUP_EPOCHS = 5  # Learning rate warmup for better training stability
 
 # Optimizer
 OPTIMIZER = "Adam"  # Options: "Adam" or "SGD"
 WEIGHT_DECAY = 0.0001  # L2 regularization
 
 # Loss Function
-LABEL_SMOOTHING = 0.0  # Disabled initially - was preventing model from learning. Can re-enable later if overfitting
-# Label smoothing helps model handle ambiguous cases and prevents overfitting to common emotions
-# But it can interfere with initial learning, so we start without it
+LABEL_SMOOTHING = 0.0  # Temporarily disabled - was interfering with learning when model collapses to one class
+# Can re-enable later (0.05-0.1) once model starts learning properly
 
 # Learning Rate Scheduling
-LR_SCHEDULER = "ReduceLROnPlateau"  # Back to ReduceLROnPlateau - more stable, responds to validation loss
+LR_SCHEDULER = "CosineAnnealingLR"  # Changed to CosineAnnealingLR - better for longer training
 LR_FACTOR = 0.5  # Factor to reduce LR by (for ReduceLROnPlateau)
 LR_PATIENCE = 5  # Epochs to wait before reducing LR (for ReduceLROnPlateau)
 LR_MIN = 1e-6  # Minimum learning rate
-LR_T_MAX = 50  # Period for cosine annealing (restart every 50 epochs) - not used with ReduceLROnPlateau
+LR_T_MAX = 50  # Period for cosine annealing (restart every 50 epochs)
 
 # Early Stopping
 EARLY_STOPPING = True
