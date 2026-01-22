@@ -40,7 +40,7 @@ TRACK_CONFUSING_PAIRS = True  # Set to True to analyze confusion between these p
 # Training
 BATCH_SIZE = 64
 NUM_EPOCHS = 50
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0005  # Reduced from 0.001 - more stable with class weights
 NUM_WORKERS = 2
 
 # Optimizer

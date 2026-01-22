@@ -45,10 +45,11 @@ class EmotionCNN(nn.Module):
         self.dropout_fc = nn.Dropout(0.5)  # Dropout for FC layers
 
         # Final classification layers: Maps 6x6 feature maps to 7 emotion categories
-        self.fc1 = nn.Linear(128 * 6 * 6, 256)
+        self.fc1 = nn.Linear(128 * 6 * 6, 512)  # Increased from 256 to 512 for more capacity
         nn.init.kaiming_normal_(self.fc1.weight, mode='fan_out', nonlinearity='relu')
-        self.fc2 = nn.Linear(256, num_classes)
-        nn.init.kaiming_normal_(self.fc2.weight, mode='fan_out', nonlinearity='relu')
+        self.fc2 = nn.Linear(512, num_classes)  # Updated to match fc1
+        # Use Xavier initialization for final layer (better for classification)
+        nn.init.xavier_uniform_(self.fc2.weight)
 
     def forward(self, x):
         # First conv block: 48x48 -> 24x24
