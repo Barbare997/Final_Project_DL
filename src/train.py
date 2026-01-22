@@ -275,8 +275,7 @@ def main():
         mode='min',  # Reduce LR when validation loss stops decreasing
         factor=LR_FACTOR,  # Multiply LR by this factor
         patience=LR_PATIENCE,  # Wait this many epochs before reducing
-        min_lr=LR_MIN,  # Don't reduce below this
-        verbose=True  # Print when LR is reduced
+        min_lr=LR_MIN  # Don't reduce below this
     )
     print(f"Learning rate scheduler: ReduceLROnPlateau (factor={LR_FACTOR}, patience={LR_PATIENCE})")
     
