@@ -40,28 +40,27 @@ TRACK_CONFUSING_PAIRS = True  # Set to True to analyze confusion between these p
 # Training
 BATCH_SIZE = 64
 NUM_EPOCHS = 100  # Increased from 50 - model was still improving at epoch 50
-LEARNING_RATE = 0.001  # Increased to 0.001 - model needs higher LR to learn (was stuck at 0.0005)
+LEARNING_RATE = 0.0005  # Safe learning rate - 0.001 was too high and caused instability
 NUM_WORKERS = 2
-WARMUP_EPOCHS = 5  # Learning rate warmup for better training stability
+WARMUP_EPOCHS = 0  # Disabled - was causing instability with ReduceLROnPlateau
 
 # Optimizer
 OPTIMIZER = "Adam"  # Options: "Adam" or "SGD"
 WEIGHT_DECAY = 0.0001  # L2 regularization
 
 # Loss Function
-LABEL_SMOOTHING = 0.0  # Temporarily disabled - was interfering with learning when model collapses to one class
-# Can re-enable later (0.05-0.1) once model starts learning properly
+LABEL_SMOOTHING = 0.05  # Light label smoothing - helps with class imbalance without being too aggressive
 
 # Learning Rate Scheduling
-LR_SCHEDULER = "CosineAnnealingLR"  # Changed to CosineAnnealingLR - better for longer training
+LR_SCHEDULER = "ReduceLROnPlateau"  # More stable - responds to validation loss, not time-based
 LR_FACTOR = 0.5  # Factor to reduce LR by (for ReduceLROnPlateau)
-LR_PATIENCE = 5  # Epochs to wait before reducing LR (for ReduceLROnPlateau)
+LR_PATIENCE = 8  # Increased patience - wait longer before reducing LR
 LR_MIN = 1e-6  # Minimum learning rate
-LR_T_MAX = 50  # Period for cosine annealing (restart every 50 epochs)
+LR_T_MAX = 50  # Period for cosine annealing (not used with ReduceLROnPlateau)
 
 # Early Stopping
 EARLY_STOPPING = True
-EARLY_STOP_PATIENCE = 15  # Increased from 10 - allow more time for deeper model to converge
+EARLY_STOP_PATIENCE = 20  # Increased - model needs more time, validation accuracy is fluctuating
 EARLY_STOP_MIN_DELTA = 0.001  # Minimum change to qualify as improvement
 
 # Focal Loss (helps with hard examples like fear, angry)
