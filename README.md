@@ -89,5 +89,9 @@ We tested different configurations:
 
 In data preprocessing the focus was on preparing the images in a way that is suitable for convolutional neural networks. All images were resized to 48×48 pixels and converted to grayscale to ensure a consistent input format. Pixel values were normalized to improve training stability. The dataset was split into training, validation, and test sets to allow proper evaluation of the model’s generalization performance
 
-Our CNN has three convolutional blocks for 48×48 grayscale faces. Each block does convolution, batch normalization, ReLU, and pooling to learn features. Batch normalization helps training, and dropout in the fully connected part reduces overfitting. The final layers classify into 7 emotions. It's tuned to train well on FER-2013 and fast enough for real-time use
+Our CNN has four convolutional layers organized into blocks for 48×48 grayscale faces. Each block applies convolution, ReLU activation, and pooling to progressively learn features from edges to facial parts to emotion patterns. Dropout layers (both in convolutional and fully connected parts) reduce overfitting. The final fully connected layers classify into 7 emotions. The architecture is tuned to train well on FER-2013 and fast enough for real-time use
+
+The config.py file stores all our hyperparameters in one place. We tested different values and found what works: learning rate 0.001 trains fast without breaking, batch size 64 is a good balance, and Adam optimizer handles the class imbalance better than SGD. The learning rate scheduler automatically lowers the rate when training gets stuck. Each setting has comments explaining why we chose it.
+
+The train.py script runs the whole training process. It loads the data, trains the model for multiple epochs, and checks performance on validation data. It saves the best model automatically and creates graphs showing how training went. It also tracks which emotions get confused with each other, which helps us understand where the model struggles
 
