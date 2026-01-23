@@ -1,7 +1,6 @@
 import cv2
 import torch
 import os
-import sys
 
 from model import EmotionCNN
 from config import EMOTION_CLASSES, IMG_SIZE, MODEL_SAVE_DIR, MODEL_NAME, DEVICE
