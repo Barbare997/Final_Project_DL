@@ -38,6 +38,40 @@ pip install -r requirements.txt
 
 You'll need PyTorch, OpenCV, numpy, and some other libraries. If you're on Google Colab, most of these come pre-installed.
 
+## How to Run
+
+### Training the Model
+
+You have two options for training:
+
+**Option 1: Using the Jupyter Notebook (Recommended for Colab)**
+1. Open `notebooks/run_training.ipynb` in Google Colab or Jupyter
+2. Make sure your FER-2013 dataset is in the `data/` folder
+3. Run all cells - the notebook will handle everything from setup to training
+4. The trained model will be saved in `models/cnn_model.pth`
+
+**Option 2: Using the Python Script**
+1. Make sure your dataset is in the `data/` folder with train/val/test splits
+2. Run from the project root:
+   ```bash
+   python src/train.py
+   ```
+3. The model will be saved to `models/cnn_model.pth` when training completes
+
+### Running the Webcam Demo
+
+Once you have a trained model:
+
+1. Make sure `models/cnn_model.pth` exists (from training above)
+2. Run the demo:
+   ```bash
+   python src/main.py
+   ```
+3. Your webcam should open. Look at the camera and the model will predict your emotion in real-time
+4. Press 'q' to quit
+
+The demo detects faces automatically and shows the predicted emotion with a confidence score above the detected face.
+
 ## Experiments
 
 We tested different configurations:
