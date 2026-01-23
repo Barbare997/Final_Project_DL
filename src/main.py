@@ -11,7 +11,10 @@ def main():
     device = torch.device(DEVICE)
     print(f"Using device: {device}")
     
-    model_path = os.path.join(MODEL_SAVE_DIR, MODEL_NAME)
+    # Get the project root directory (parent of src/)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    model_path = os.path.join(project_root, MODEL_SAVE_DIR, MODEL_NAME)
     
     if not os.path.exists(model_path):
         print(f"Model not found at {model_path}")
