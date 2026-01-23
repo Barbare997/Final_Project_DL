@@ -77,7 +77,7 @@ The demo detects faces automatically and shows the predicted emotion with a conf
 We tested different configurations:
 - **Optimizers**: Adam vs SGD
 - **Regularization**: Effect of Dropout
-- **Normalization**: Effect of BatchNorm
+- **Learning Rate Schedules**: ReduceLROnPlateau vs CosineAnnealingLR
 
 
 ## Notes
