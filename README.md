@@ -13,12 +13,11 @@ We're using the [FER-2013 dataset from Kaggle](https://www.kaggle.com/datasets/m
 ## Project Structure
 
 ```
-emotion_recognition_project/
+Final_Project_DL/
 ├── data/                 # FER-2013 dataset (train/val/test)
 ├── models/               # Trained models saved here
 ├── notebooks/
-│   ├── run_training.ipynb    # Run training on Colab
-│   └── run_inference.ipynb   # Live webcam demo
+│   └── run_training.ipynb    # Run training on Colab
 ├── scripts/
 │   └── split_validation.py   # Preprocessing script
 └── src/
